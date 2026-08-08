@@ -1,0 +1,537 @@
+-- Ultimate Pro Combat Hub (Fixed Aimbot Smooth Lock & Line of Sight)
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- ป้องกันหน้าต่างซ้ำซ้อน
+if CoreGui:FindFirstChild("UltimateProHub") then
+    CoreGui.UltimateProHub:Destroy()
+end
+
+-- สร้าง ScreenGui หลัก
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "UltimateProHub"
+ScreenGui.Parent = CoreGui
+
+-- ระบบแจ้งเตือนแบบดิจิตอล (Digital Notification มุมขวาบน)
+local NotifContainer = Instance.new("Frame")
+NotifContainer.Size = UDim2.new(0, 260, 1, 0)
+NotifContainer.Position = UDim2.new(1, -270, 0, 20)
+NotifContainer.BackgroundTransparency = 1
+NotifContainer.Parent = ScreenGui
+
+local NotifLayout = Instance.new("UIListLayout")
+NotifLayout.SortOrder = Enum.SortOrder.Name
+NotifLayout.Padding = UDim.new(0, 8)
+NotifLayout.Parent = NotifContainer
+
+local function SendDigitalNotification(title, message, duration)
+    task.spawn(function()
+        local card = Instance.new("Frame")
+        card.Size = UDim2.new(1, 0, 0, 55)
+        card.BackgroundColor3 = Color3.fromRGB(10, 14, 24)
+        card.BackgroundTransparency = 0.1
+        card.BorderSizePixel = 0
+        card.Parent = NotifContainer
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(0, 255, 180)
+        stroke.Thickness = 1.5
+        stroke.Parent = card
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 6)
+        corner.Parent = card
+
+        local titleLbl = Instance.new("TextLabel")
+        titleLbl.Size = UDim2.new(1, -15, 0, 20)
+        titleLbl.Position = UDim2.new(0, 12, 0, 6)
+        titleLbl.BackgroundTransparency = 1
+        titleLbl.Text = "[DIGITAL] " .. title
+        titleLbl.TextColor3 = Color3.fromRGB(0, 255, 180)
+        titleLbl.Font = Enum.Font.Code
+        titleLbl.TextSize = 12
+        titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+        titleLbl.Parent = card
+
+        local msgLbl = Instance.new("TextLabel")
+        msgLbl.Size = UDim2.new(1, -15, 0, 20)
+        msgLbl.Position = UDim2.new(0, 12, 0, 26)
+        msgLbl.BackgroundTransparency = 1
+        msgLbl.Text = message
+        msgLbl.TextColor3 = Color3.fromRGB(200, 220, 240)
+        msgLbl.Font = Enum.Font.Gotham
+        msgLbl.TextSize = 11
+        msgLbl.TextXAlignment = Enum.TextXAlignment.Left
+        msgLbl.Parent = card
+
+        task.wait(duration or 3)
+        card:Destroy()
+    end)
+end
+
+-- หน้าต่างเมนูหลัก (Main Frame)
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 560, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -280, 0.5, -200)
+MainFrame.BackgroundColor3 = Color3.fromRGB(8, 10, 18)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(0, 255, 180)
+UIStroke.Thickness = 2
+UIStroke.Parent = MainFrame
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+-- แถบหัวข้อด้านบน
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+TopBar.BackgroundColor3 = Color3.fromRGB(12, 16, 26)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local TopBarCorner = Instance.new("UICorner")
+TopBarCorner.CornerRadius = UDim.new(0, 8)
+TopBarCorner.Parent = TopBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -100, 1, 0)
+TitleLabel.Position = UDim2.new(0, 15, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "⚡ CYBERNETIC PRO HUB — [Fully Operational]"
+TitleLabel.TextColor3 = Color3.fromRGB(0, 255, 180)
+TitleLabel.Font = Enum.Font.Code
+TitleLabel.TextSize = 12
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = TopBar
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 35, 0, 35)
+CloseBtn.Position = UDim2.new(1, -40, 0, 2.5)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(220, 80, 80)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 16
+CloseBtn.Parent = TopBar
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- ปุ่มไอคอนลอย (เปิด-ปิดเมนูด้วยปุ่ม DELETE)
+local FloatBtn = Instance.new("TextButton")
+FloatBtn.Size = UDim2.new(0, 45, 0, 45)
+FloatBtn.Position = UDim2.new(0, 20, 0.5, -22)
+FloatBtn.BackgroundColor3 = Color3.fromRGB(12, 16, 26)
+FloatBtn.Text = "🛡️"
+FloatBtn.TextSize = 20
+FloatBtn.Visible = false
+FloatBtn.Active = true
+FloatBtn.Draggable = true
+FloatBtn.Parent = ScreenGui
+
+local FloatStroke = Instance.new("UIStroke")
+FloatStroke.Color = Color3.fromRGB(0, 255, 180)
+FloatStroke.Thickness = 2
+FloatStroke.Parent = FloatBtn
+
+local FloatCorner = Instance.new("UICorner")
+FloatCorner.CornerRadius = UDim.new(1, 0)
+FloatCorner.Parent = FloatBtn
+
+local uiVisible = true
+local function ToggleUI()
+    uiVisible = not uiVisible
+    MainFrame.Visible = uiVisible
+    FloatBtn.Visible = not uiVisible
+end
+
+-- เปลี่ยนปุ่มเปิด-ปิด เป็นปุ่ม DELETE ที่นี่
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.Delete then
+        ToggleUI()
+    end
+end)
+
+FloatBtn.MouseButton1Click:Connect(ToggleUI)
+
+-- ระบบ Tab เมนู
+local Sidebar = Instance.new("ScrollingFrame")
+Sidebar.Size = UDim2.new(0, 140, 1, -50)
+Sidebar.Position = UDim2.new(0, 5, 0, 45)
+Sidebar.BackgroundTransparency = 1
+Sidebar.CanvasSize = UDim2.new(0, 0, 0, 250)
+Sidebar.ScrollBarThickness = 3
+Sidebar.Parent = MainFrame
+
+local UIListLayoutSide = Instance.new("UIListLayout")
+UIListLayoutSide.Padding = UDim.new(0, 6)
+UIListLayoutSide.Parent = Sidebar
+
+local ContentContainer = Instance.new("Frame")
+ContentContainer.Size = UDim2.new(1, -155, 1, -50)
+ContentContainer.Position = UDim2.new(0, 150, 0, 45)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.Parent = MainFrame
+
+local function CreateTabContent(name)
+    local scrollingFrame = Instance.new("ScrollingFrame")
+    scrollingFrame.Name = name .. "Container"
+    scrollingFrame.Size = UDim2.new(1, 0, 1, 0)
+    scrollingFrame.BackgroundTransparency = 1
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 550)
+    scrollingFrame.ScrollBarThickness = 4
+    scrollingFrame.Visible = false
+    scrollingFrame.Parent = ContentContainer
+
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 8)
+    layout.Parent = scrollingFrame
+    return scrollingFrame
+end
+
+local tabCombat = CreateTabContent("Combat")
+local tabSecurity = CreateTabContent("Security")
+local tabVisuals = CreateTabContent("Visuals")
+
+tabCombat.Visible = true
+
+local function CreateTabButton(text, targetTab)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -5, 0, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(14, 18, 30)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(180, 190, 220)
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 12
+    btn.Parent = Sidebar
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        tabCombat.Visible = false
+        tabSecurity.Visible = false
+        tabVisuals.Visible = false
+        targetTab.Visible = true
+    end)
+end
+
+CreateTabButton("⚔️ Combat & Aimbot", tabCombat)
+CreateTabButton("🛡️ Security & Anti", tabSecurity)
+CreateTabButton("👀 Visuals & ESP", tabVisuals)
+
+local function CreateToggleOption(parentTab, titleText, callback)
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Size = UDim2.new(1, -10, 0, 40)
+    toggleFrame.BackgroundColor3 = Color3.fromRGB(14, 18, 30)
+    toggleFrame.Parent = parentTab
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = toggleFrame
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -60, 1, 0)
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = titleText
+    label.TextColor3 = Color3.fromRGB(210, 220, 240)
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 11
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = toggleFrame
+
+    local stateBtn = Instance.new("TextButton")
+    stateBtn.Size = UDim2.new(0, 45, 0, 24)
+    stateBtn.Position = UDim2.new(1, -52, 0.5, -12)
+    stateBtn.BackgroundColor3 = Color3.fromRGB(50, 55, 75)
+    stateBtn.Text = "OFF"
+    stateBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    stateBtn.Font = Enum.Font.GothamBold
+    stateBtn.TextSize = 10
+    stateBtn.Parent = toggleFrame
+
+    local stateCorner = Instance.new("UICorner")
+    stateCorner.CornerRadius = UDim.new(1, 0)
+    stateCorner.Parent = stateBtn
+
+    local enabled = false
+    stateBtn.MouseButton1Click:Connect(function()
+        enabled = not enabled
+        if enabled then
+            stateBtn.Text = "ON"
+            stateBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 180)
+        else
+            stateBtn.Text = "OFF"
+            stateBtn.BackgroundColor3 = Color3.fromRGB(50, 55, 75)
+        end
+        pcall(function()
+            callback(enabled)
+        end)
+    end)
+end
+
+local function CreateValueInput(parentTab, titleText, defaultVal, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, -10, 0, 40)
+    frame.BackgroundColor3 = Color3.fromRGB(14, 18, 30)
+    frame.Parent = parentTab
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = frame
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -80, 1, 0)
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = titleText
+    label.TextColor3 = Color3.fromRGB(210, 220, 240)
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 11
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = frame
+
+    local textBox = Instance.new("TextBox")
+    textBox.Size = UDim2.new(0, 60, 0, 24)
+    textBox.Position = UDim2.new(1, -68, 0.5, -12)
+    textBox.BackgroundColor3 = Color3.fromRGB(30, 38, 55)
+    textBox.Text = tostring(defaultVal)
+    textBox.TextColor3 = Color3.fromRGB(0, 255, 180)
+    textBox.Font = Enum.Font.Code
+    textBox.TextSize = 11
+    textBox.Parent = frame
+
+    local boxCorner = Instance.new("UICorner")
+    boxCorner.CornerRadius = UDim.new(0, 4)
+    boxCorner.Parent = textBox
+
+    textBox.FocusLost:Connect(function()
+        local num = tonumber(textBox.Text)
+        if num then
+            callback(num)
+        else
+            textBox.Text = tostring(defaultVal)
+        end
+    end)
+end
+
+local function IsEnemy(player)
+    if player == LocalPlayer then return false end
+    if LocalPlayer.Team and player.Team then
+        return player.Team ~= LocalPlayer.Team
+    end
+    return true
+end
+
+-- ==========================================
+-- 🛠️ ฟังก์ชันการทำงานจริงทั้งหมด
+-- ==========================================
+
+local aimbotEnabled = false
+local aimTargetPart = "Head"
+local fovRadius = 150
+local recoilControlPercent = 100
+
+-- สร้างวงกลม FOV จริง
+local FOVDrawing = Drawing.new("Circle")
+FOVDrawing.Visible = false
+FOVDrawing.Radius = fovRadius
+FOVDrawing.Color = Color3.fromRGB(0, 255, 180)
+FOVDrawing.Thickness = 1.5
+FOVDrawing.Filled = false
+FOVDrawing.Transparency = 0.8
+
+-- 1. สลับเป้าหมาย ล็อกหัว / ล็อกตัว
+CreateToggleOption(tabCombat, "1. Target Switch [Head / Torso]", function(v)
+    if v then
+        aimTargetPart = "HumanoidRootPart"
+        SendDigitalNotification("COMBAT", "Aimbot Target: [Torso (ลำตัว)]", 3)
+    else
+        aimTargetPart = "Head"
+        SendDigitalNotification("COMBAT", "Aimbot Target: [Head (หัว)]", 3)
+    end
+end)
+
+-- 2. ปรับค่า FOV (1 - 300) ทันที
+CreateValueInput(tabCombat, "2. FOV Radius (1-300)", 150, function(val)
+    fovRadius = math.clamp(val, 1, 300)
+    FOVDrawing.Radius = fovRadius
+    SendDigitalNotification("COMBAT", "FOV Adjusted to: " .. fovRadius, 3)
+end)
+
+-- 3. Aimbot ล็อกเป้าหมายแบบสมูท
+CreateToggleOption(tabCombat, "3. Aimbot Lock (Smooth & Visible)", function(v)
+    aimbotEnabled = v
+    FOVDrawing.Visible = v
+    SendDigitalNotification("COMBAT", "Aimbot System: " .. tostring(v), 3)
+    
+    task.spawn(function()
+        while aimbotEnabled do
+            local mousePos = UserInputService:GetMouseLocation()
+            FOVDrawing.Position = mousePos
+            
+            local nearest, shortest = nil, fovRadius
+            
+            for _, p in pairs(Players:GetPlayers()) do
+                if IsEnemy(p) and p.Character and p.Character:FindFirstChild(aimTargetPart) then
+                    local humanoid = p.Character:FindFirstChildOfClass("Humanoid")
+                    if humanoid and humanoid.Health > 0 then
+                        local targetPart = p.Character[aimTargetPart]
+                        local screenPoint, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                        
+                        if onScreen and screenPoint.Z > 0 then
+                            local screenPos = Vector2.new(screenPoint.X, screenPoint.Y)
+                            local dist = (screenPos - mousePos).Magnitude
+                            
+                            if dist < shortest then
+                                local raycastParams = RaycastParams.new()
+                                raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, p.Character}
+                                raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                                
+                                local origin = Camera.CFrame.Position
+                                local direction = (targetPart.Position - origin).Unit * (targetPart.Position - origin).Magnitude
+                                local result = workspace:Raycast(origin, direction, raycastParams)
+                                
+                                if not result then
+                                    shortest = dist
+                                    nearest = targetPart
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            
+            if nearest then
+                local targetCFrame = CFrame.new(Camera.CFrame.Position, nearest.Position)
+                Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, 0.25)
+            end
+            
+            RunService.RenderStepped:Wait()
+        end
+        FOVDrawing.Visible = false
+    end)
+end)
+
+-- 4. ตั้งค่าเปอร์เซ็นต์ลดแรงดีด
+CreateValueInput(tabCombat, "4. Recoil Control % (1-100)", 100, function(val)
+    recoilControlPercent = math.clamp(val, 1, 100)
+    SendDigitalNotification("COMBAT", "Recoil Reduction: " .. recoilControlPercent .. "%", 3)
+end)
+
+-- 5. ระบบลดแรงดีดปืน
+local lastCamCFrame = Camera.CFrame
+local recoilConn
+CreateToggleOption(tabCombat, "5. Enable No Recoil / Control", function(v)
+    if v then
+        recoilConn = RunService.RenderStepped:Connect(function()
+            local currentCFrame = Camera.CFrame
+            if recoilControlPercent < 100 then
+                local diff = currentCFrame - lastCamCFrame
+                local multiplier = (100 - recoilControlPercent) / 100
+                if diff.LookVector.Y > 0 then
+                    Camera.CFrame = Camera.CFrame * CFrame.Angles(-diff.LookVector.Y * multiplier, 0, 0)
+                end
+            end
+            lastCamCFrame = Camera.CFrame
+        end)
+        SendDigitalNotification("COMBAT", "Recoil Control Enabled", 3)
+    else
+        if recoilConn then recoilConn:Disconnect() end
+        SendDigitalNotification("COMBAT", "Recoil Control Disabled", 3)
+    end
+end)
+
+-- ==================== SECURITY & ANTI ====================
+
+-- 6. Anti-AFK
+CreateToggleOption(tabSecurity, "6. Anti-AFK (กันโดนเตะห้อง)", function(v)
+    SendDigitalNotification("SECURITY", "Anti-AFK System: " .. tostring(v), 3)
+    if v then
+        local vu = game:GetService("VirtualUser")
+        LocalPlayer.Idled:Connect(function()
+            vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            task.wait(1)
+            vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        end)
+    end
+end)
+
+-- 7. Server Anti-Detection Bypass
+CreateToggleOption(tabSecurity, "7. Server Anti-Detection Bypass", function(v)
+    SendDigitalNotification("SECURITY", "Bypass Protection: " .. tostring(v), 3)
+    if v then
+        task.spawn(function()
+            pcall(function()
+                local mt = getrawmetatable(game)
+                setreadonly(mt, false)
+                local oldNamecall = mt.__namecall
+                mt.__namecall = newcclosure(function(self, ...)
+                    local method = getnamecallmethod()
+                    if method == "Kick" or method == "kick" then
+                        return nil
+                    end
+                    return oldNamecall(self, ...)
+                end)
+                setreadonly(mt, true)
+            end)
+        end)
+    end
+end)
+
+-- ==================== VISUALS ====================
+
+-- 8. Enemy ESP Box
+local espEnabled = false
+CreateToggleOption(tabVisuals, "8. Enemy ESP Box", function(v)
+    espEnabled = v
+    SendDigitalNotification("VISUALS", "Enemy ESP Box: " .. tostring(v), 3)
+    if not espEnabled then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p.Character and p.Character:FindFirstChild("BoxESP") then
+                p.Character.BoxESP:Destroy()
+            end
+        end
+    else
+        task.spawn(function()
+            while espEnabled do
+                for _, p in pairs(Players:GetPlayers()) do
+                    if IsEnemy(p) and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        if not p.Character:FindFirstChild("BoxESP") then
+                            local bb = Instance.new("BillboardGui")
+                            bb.Name = "BoxESP"
+                            bb.AlwaysOnTop = true
+                            bb.Size = UDim2.new(4, 0, 5, 0)
+                            bb.StudsOffset = Vector3.new(0, 1, 0)
+                            bb.Parent = p.Character
+                            
+                            local frame = Instance.new("Frame")
+                            frame.Size = UDim2.new(1, 0, 1, 0)
+                            frame.BackgroundTransparency = 1
+                            frame.BorderSizePixel = 2
+                            frame.BorderColor3 = Color3.fromRGB(0, 255, 180)
+                            frame.Parent = bb
+                        end
+                    end
+                end
+                task.wait(1)
+            end
+        end)
+    end
+end)
+
+SendDigitalNotification("SYSTEM", "Cybernetic Hub Fully Loaded! Press [DELETE] to Toggle UI.", 5)
